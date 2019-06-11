@@ -14,7 +14,7 @@ $ ./setup.sh
 $ cd public
 ```
 
-2. Run process convert repositories to user/directories/grav/ folder
+3. Run process convert repositories to user/directories/grav/ folder
 ```shell
 $ ./bin/repositories-to-flex convert
 ```
@@ -24,4 +24,4 @@ $ ./bin/repositories-to-flex convert
 $ php -S 0.0.0.0:8080 system/router.php
 ```
 
-4. Open your browser http://localhost:8080/ 
+5. Open your browser http://localhost:8080/ 
