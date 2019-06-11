@@ -1,0 +1,44 @@
+title: Grav Themes
+description:
+type: flex-directory
+
+config:
+  admin:
+    list:
+      title: name
+      fields:
+        name:
+          link: edit
+          sort: 1
+          order: 0
+        version:
+          width: 8
+        keywords:
+        slug:
+          width: 8
+  data:
+    storage:
+      type: folder
+      file: user://directories/repositories/themes/%s/theme.json
+      key: slug
+
+form:
+  validation: loose
+
+  fields:
+    slug:
+      type: slug
+      label: Slug
+    name:
+      type: text
+      label: Name
+    version:
+      type: text
+      label: Version
+    keywords:
+      type: selectize
+      size: large
+      label: Tags
+      classes: fancy
+      validate:
+        type: commalist
