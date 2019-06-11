@@ -1,0 +1,126 @@
+#!/usr/bin/env php
+<?php
+
+// namespace Grav\Plugin\Console;
+
+use Symfony\Component\Console\Application;
+use Grav\Common\Grav;
+use Grav\Common\GPM\GPM;
+use Grav\Common\Utils;
+use Grav\Console\ConsoleCommand;
+use League\CLImate\CLImate;
+use Grav\Common\Filesystem\Folder;
+use Grav\Framework\File\Formatter\JsonFormatter;
+use Grav\Framework\File\JsonFile;
+
+
+\define('GRAV_CLI', true);
+\define('GRAV_REQUEST_TIME', microtime(true));
+
+$autoload = require __DIR__ . '/../vendor/autoload.php';
+
+
+/**
+ * Class RepositoriesToFlexCommand
+ *
+ * @package Grav\Plugin\Console
+ */
+class RepositoriesToFlexCommand extends ConsoleCommand
+{
+    /**
+     * Greets a person with or without yelling
+     */
+    protected function configure()
+    {
+        $this
+            ->setName("convert")
+            ->setDescription("Convert Repositories To Flex folder.")
+        ;
+    }
+
+    /**
+     * @return int|null|void
+     */
+    protected function serve()
+    {
+        $this->gpm = new GPM();
+        $data = $this->gpm->getRepository();
+
+        if (!$data) {
+                $this->output->writeln('No data was found in the GPM repository stored locally.');
+                $this->output->writeln('Please try clearing cache and running the <green>bin/gpm index -f</green> command again');
+                $this->output->writeln('If this doesn\'t work try tweaking your GPM system settings.');
+                $this->output->writeln('');
+                $this->output->writeln('For more help go to:');
+                $this->output->writeln(' -> <yellow>https://learn.getgrav.org/troubleshooting/common-problems#cannot-connect-to-the-gpm</yellow>');
+                die;
+        }
+        // $blueprintsFlexDirectory = Grav::instance()['config']['plugins']['flex-directory']['directories'];
+        $folderRoot = Grav::instance()['locator']->findResource('user://directories/repositories', true, true);
+        try {
+            mkdir($folderRoot, 0777, true);
+            foreach ($data as $type => $packages) {
+                $folderType = $folderRoot . '/' . $type;
+                mkdir($folderType, 0777, true);
+                if (!empty($packages)) {
+                    foreach ($packages as $slug => $package) {
+                        $folderPackage = $folderType . '/' . $slug;
+                        mkdir($folderPackage, 0777, true);
+                        $filename = $folderPackage . '/' . rtrim($type, 's') . '.json';
+                        $file = new JsonFile($filename, new JsonFormatter(['encode_options'=>JSON_PRETTY_PRINT]));
+                        $file->save($package);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            throw new \RuntimeException(sprintf('Failed to save %s: %s', $this->path, $e->getMessage()), 500, $e);
+        }
+    }
+
+}
+
+
+
+if (version_compare($ver = PHP_VERSION, $req = GRAV_PHP_MIN, '<')) {
+    exit(sprintf("You are running PHP %s, but Grav needs at least PHP %s to run.\n", $ver, $req));
+}
+
+if (!ini_get('date.timezone')) {
+    date_default_timezone_set('UTC');
+}
+
+if (!file_exists(GRAV_ROOT . '/index.php')) {
+    exit('FATAL: Must be run from ROOT directory of Grav!');
+}
+
+if (!function_exists('curl_version')) {
+    exit('FATAL: GPM requires PHP Curl module to be installed');
+}
+
+$climate = new CLImate;
+$climate->arguments->add([
+    'environment' => [
+        'prefix'        => 'e',
+        'longPrefix'    => 'env',
+        'description'   => 'Configuration Environment',
+        'defaultValue'  => 'localhost'
+    ]
+]);
+$climate->arguments->parse();
+
+// Set up environment based on params.
+$environment = $climate->arguments->get('environment');
+
+$grav = Grav::instance(array('loader' => $autoload));
+$grav->setup($environment);
+
+$grav['config']->init();
+$grav['uri']->init();
+$grav['users'];
+
+$app = new Application('Grav Plugins to Flex');
+$app->addCommands(array(
+    new RepositoriesToFlexCommand(),
+));
+
+$app->run();
